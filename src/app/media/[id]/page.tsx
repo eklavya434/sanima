@@ -170,6 +170,36 @@ export default function MediaDetailPage() {
           <div className="space-y-3">
             <div className="flex items-center gap-3 flex-wrap">
               <CategoryBadge category={media.category} />
+              
+              {session && ["TV_SHOW", "WEB_SERIES", "TV_SERIAL"].includes(media.category) && (
+                <div className="flex items-center gap-1.5 text-xs text-gray-400">
+                  <span className="text-[10px] uppercase font-bold text-gray-500 font-mono">Reclassify:</span>
+                  <select
+                    value={media.category}
+                    onChange={async (e) => {
+                      const newCat = e.target.value;
+                      try {
+                        const res = await fetch(`/api/media/${media.id}`, {
+                          method: "PUT",
+                          headers: { "Content-Type": "application/json" },
+                          body: JSON.stringify({ category: newCat }),
+                        });
+                        if (res.ok) {
+                          setMedia({ ...media, category: newCat });
+                        }
+                      } catch (err) {
+                        console.error("Reclassify error:", err);
+                      }
+                    }}
+                    className="bg-[#151821] border border-gray-800 text-xs text-[#E8A33D] rounded px-2 py-0.5 cursor-pointer focus:outline-none hover:border-[#E8A33D]/30 transition"
+                  >
+                    <option value="TV_SHOW">TV Show</option>
+                    <option value="WEB_SERIES">Web Series</option>
+                    <option value="TV_SERIAL">TV Serial</option>
+                  </select>
+                </div>
+              )}
+
               <span className="text-sm text-gray-400 font-semibold font-mono">{media.year}</span>
             </div>
             <h1 className="text-4xl sm:text-5xl font-black text-white tracking-wider leading-tight">

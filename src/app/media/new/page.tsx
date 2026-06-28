@@ -1,15 +1,16 @@
 "use client";
 
 import { useSession } from "next-auth/react";
-import { useRouter } from "next/navigation";
-import { useState, useEffect } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { useState, useEffect, Suspense } from "react";
 import { Category } from "@prisma/client";
 import Link from "next/link";
 import { Film, Plus, Loader2, AlertCircle } from "lucide-react";
 
-export default function NewMediaPage() {
+function NewMediaContent() {
   const { data: session, status } = useSession();
   const router = useRouter();
+  const searchParams = useSearchParams();
 
   const [formData, setFormData] = useState({
     title: "",
@@ -30,6 +31,13 @@ export default function NewMediaPage() {
       router.push("/auth/signin?callbackUrl=/media/new");
     }
   }, [status, router]);
+
+  useEffect(() => {
+    const titleParam = searchParams.get("title");
+    if (titleParam) {
+      setFormData((prev) => ({ ...prev, title: titleParam }));
+    }
+  }, [searchParams]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     setFormData({
@@ -222,5 +230,17 @@ export default function NewMediaPage() {
         </form>
       </div>
     </div>
+  );
+}
+
+export default function NewMediaPage() {
+  return (
+    <Suspense fallback={
+      <div className="flex justify-center items-center min-h-[50vh]">
+        <Loader2 className="w-8 h-8 animate-spin text-[#E8A33D]" />
+      </div>
+    }>
+      <NewMediaContent />
+    </Suspense>
   );
 }

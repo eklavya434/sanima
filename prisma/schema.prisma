@@ -46,10 +46,13 @@ model MediaItem {
   externalUrl     String?
   createdByUserId String
   createdAt       DateTime  @default(now())
+  externalSource  String?
+  externalId      String?
   
   reviews         Review[]
 
   @@unique([title, category])
+  @@unique([externalSource, externalId])
 }
 
 enum SceneNoteType {

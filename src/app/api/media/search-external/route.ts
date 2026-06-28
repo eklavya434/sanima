@@ -38,10 +38,39 @@ export async function GET(req: Request) {
       localWhere.year = parseInt(year);
     }
 
-    const localItems = await prisma.mediaItem.findMany({
-      where: localWhere,
-      orderBy: { createdAt: "desc" },
-    });
+    let localItems: any[] = [];
+    try {
+      localItems = await prisma.mediaItem.findMany({
+        where: localWhere,
+        include: {
+          popularityCache: {
+            select: {
+              tmdbPopularityScore: true,
+            },
+          },
+        },
+      });
+
+      // Sort: exact matches first, then sort by popularity score descending
+      localItems.sort((a, b) => {
+        const aExact = a.title.toLowerCase().trim() === q.toLowerCase().trim();
+        const bExact = b.title.toLowerCase().trim() === q.toLowerCase().trim();
+
+        if (aExact && !bExact) return -1;
+        if (!aExact && bExact) return 1;
+
+        const aScore = a.popularityCache && a.popularityCache.length > 0
+          ? Math.max(...a.popularityCache.map((c: any) => c.tmdbPopularityScore))
+          : 0;
+        const bScore = b.popularityCache && b.popularityCache.length > 0
+          ? Math.max(...b.popularityCache.map((c: any) => c.tmdbPopularityScore))
+          : 0;
+
+        return bScore - aScore;
+      });
+    } catch (dbError) {
+      console.error("Local database query failed, proceeding with empty local results:", dbError);
+    }
 
     // 2. Fetch TMDB Matches (only for MOVIE, TV_SHOW, WEB_SERIES, TV_SERIAL, or ALL)
     const isTMDBCompatible =
@@ -101,7 +130,17 @@ export async function GET(req: Request) {
           }
 
           const resultsArray = await Promise.all(searchPromises);
-          externalResults = resultsArray.flat().sort((a, b) => (b.year || 0) - (a.year || 0));
+          
+          // Interleave results to preserve TMDB relevance order
+          const firstResults = resultsArray[0] || [];
+          const secondResults = resultsArray[1] || [];
+          const combined: any[] = [];
+          const maxLength = Math.max(firstResults.length, secondResults.length);
+          for (let i = 0; i < maxLength; i++) {
+            if (i < firstResults.length) combined.push(firstResults[i]);
+            if (i < secondResults.length) combined.push(secondResults[i]);
+          }
+          externalResults = combined;
 
           // Cache the query results
           cache.set(cacheKey, { timestamp: Date.now(), data: externalResults });

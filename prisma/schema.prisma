@@ -50,9 +50,23 @@ model MediaItem {
   externalId      String?
   
   reviews         Review[]
+  popularityCache PopularityCache[]
 
   @@unique([title, category])
   @@unique([externalSource, externalId])
+}
+
+model PopularityCache {
+  id                  String      @id @default(uuid())
+  mediaId             String
+  media               MediaItem   @relation(fields: [mediaId], references: [id], onDelete: Cascade)
+  tmdbPopularityScore Float
+  genre               String
+  category            Category
+  rankInGenre         Int
+  lastRefreshedAt     DateTime    @default(now())
+
+  @@unique([mediaId, genre])
 }
 
 enum SceneNoteType {

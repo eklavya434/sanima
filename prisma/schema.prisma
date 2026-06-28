@@ -1,0 +1,115 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model User {
+  id           String    @id @default(uuid())
+  name         String
+  email        String    @unique
+  passwordHash String
+  avatarUrl    String?
+  bio          String?
+  createdAt    DateTime  @default(now())
+  
+  reviews      Review[]
+  likes        Like[]
+  comments     Comment[]
+}
+
+enum Category {
+  MOVIE
+  TV_SHOW
+  WEB_SERIES
+  TV_SERIAL
+  TV_AD
+  YT_AD
+  YT_VIDEO
+  PODCAST
+  OTHER
+}
+
+model MediaItem {
+  id              String    @id @default(uuid())
+  title           String
+  category        Category
+  year            Int
+  creatorOrStudio String
+  posterUrl       String?
+  description     String
+  externalUrl     String?
+  createdByUserId String
+  createdAt       DateTime  @default(now())
+  
+  reviews         Review[]
+
+  @@unique([title, category])
+}
+
+enum SceneNoteType {
+  TOP_SCENE
+  SCENE_THAT_STAYED_WITH_ME
+  WHAT_I_LEARNT
+  OTHER
+}
+
+model Review {
+  id         String      @id @default(uuid())
+  userId     String
+  mediaId    String
+  rating     Float       // 1.0 to 10.0, e.g. 8.5
+  body       String?     @db.Text // rich text or markdown body
+  rewatched  Boolean     @default(false)
+  createdAt  DateTime    @default(now())
+  updatedAt  DateTime    @updatedAt
+
+  user       User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  media      MediaItem   @relation(fields: [mediaId], references: [id], onDelete: Cascade)
+  sceneNotes SceneNote[]
+  likes      Like[]
+  comments   Comment[]
+
+  @@unique([userId, mediaId])
+}
+
+model SceneNote {
+  id             String        @id @default(uuid())
+  reviewId       String
+  type           SceneNoteType
+  rank           Int?          // Only used for TOP_SCENE (1-5)
+  episodeLabel   String?       // e.g. "S2E4"
+  timestampLabel String?       // e.g. "1:42:10"
+  content        String        @db.Text
+  createdAt      DateTime      @default(now())
+
+  review         Review        @relation(fields: [reviewId], references: [id], onDelete: Cascade)
+}
+
+model Like {
+  id        String   @id @default(uuid())
+  userId    String
+  reviewId  String
+  createdAt DateTime @default(now())
+
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  review    Review   @relation(fields: [reviewId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, reviewId])
+}
+
+model Comment {
+  id        String   @id @default(uuid())
+  userId    String
+  reviewId  String
+  body      String   @db.Text
+  createdAt DateTime @default(now())
+
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  review    Review   @relation(fields: [reviewId], references: [id], onDelete: Cascade)
+}
